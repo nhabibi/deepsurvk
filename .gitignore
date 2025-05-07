@@ -84,10 +84,8 @@ celerybeat-schedule
 .env
 
 # virtualenv
-.venv
-venv/
 ENV/
-deepsurvk_fix/
+venv/
 
 # Spyder project settings
 .spyderproject

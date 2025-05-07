@@ -1,38 +1,15 @@
-# ---
-# jupyter:
-#   jupytext:
-#     formats: ipynb,py:percent
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.11.3
-#   kernelspec:
-#     display_name: Python 3
-#     language: python
-#     name: python3
-# ---
-
-# %% [markdown]
-# Before we begin, we will change a few settings to make the notebook look a bit prettier
-
-# %% language="html"
-# <style> body {font-family: "Calibri", cursive, sans-serif;} </style>
-
-
-# %% [markdown]
-#
 # # 00 - Understanding DeepSurv (using Keras)
 # Before anything else, it makes sense to spend some time in understanding
 # how the original DeepSurv works. In this notebook, we take an example dataset
 # and go step by step through the algorithm. Please note that the code 
 # here was written with clarity over performance in mind.
-#
-# ## Preliminaries
-#
-# Import packages
 
-# %%
+################################################################################################
+# SECTION 1: PRELIMINARIES AND IMPORTS
+################################################################################################
+
+# pip3 install tensorflow numpy scikit-learn lifelines h5py
+
 import pathlib
 import numpy as np
 
@@ -50,11 +27,10 @@ from matplotlib import pyplot as plt
 
 import h5py
 
+################################################################################################
+# SECTION 2: FILE PATHS AND SETUP
+################################################################################################
 
-# %% [markdown]
-# Define paths.
-
-# %%
 example_file = '00_understanding_deepsurv'
 PATH_DATA = pathlib.Path(r'../deepsurvk/datasets/data')
 PATH_MODELS = pathlib.Path('./models/')
@@ -69,15 +45,10 @@ if not PATH_MODELS.exists():
     PATH_MODELS.mkdir(parents=True)
     print("DONE!")
     
+################################################################################################
+# SECTION 3: DATA LOADING
+################################################################################################
 
-
-# %% [markdown]
-# ## Get data
-# In this case, we will use the Worcester Heart Attack Study (WHAS) dataset.
-# For a more detailed description about it, please see the corresponding
-# [README](../data/README.md).
-
-# %%
 path_data_file = PATH_DATA/'whas.h5'
 
 # Read training data.
@@ -85,7 +56,6 @@ with h5py.File(path_data_file, 'r') as f:
     X_train = f['train']['x'][()]
     E_train = f['train']['e'][()]
     Y_train = f['train']['t'][()].reshape(-1, 1)
-
 
 # Read testing data.
 with h5py.File(path_data_file, 'r') as f:
@@ -97,16 +67,15 @@ with h5py.File(path_data_file, 'r') as f:
 n_patients_train = X_train.shape[0]
 n_features = X_train.shape[1]
 
-
-# %% [markdown]
-# ## Pre-process data
+################################################################################################
+# SECTION 4: DATA PREPROCESSING
+################################################################################################
 # * Standardization <br>
 # First, we need to standardize the input (p. 3).
 # Notice how we only use training data for the standardization.
 # This done to avoid leakage (using information from
 # the testing partition for the model training.)
 
-# %%
 X_scaler = StandardScaler().fit(X_train)
 X_train = X_scaler.transform(X_train)
 X_test = X_scaler.transform(X_test)
@@ -118,19 +87,15 @@ Y_test = Y_scaler.transform(Y_test)
 Y_train = Y_train.flatten()
 Y_test = Y_test.flatten()
 
-# %% [markdown]
-# * Sorting <br>
 # This is important, since we are performing a ranking task.
-
-# %%
 sort_idx = np.argsort(Y_train)[::-1]
 X_train = X_train[sort_idx]
 Y_train = Y_train[sort_idx]
 E_train = E_train[sort_idx]
 
-
-# %% [markdown]
-# ## Define the loss function
+################################################################################################
+# SECTION 5: LOSS FUNCTION DEFINITION
+################################################################################################
 # DeepSurv's loss function is the average negative log partial likelihood with
 # regularization (Eq. 4, p. 3):
 #    
@@ -143,7 +108,6 @@ E_train = E_train[sort_idx]
 # that is actually well known in the community. This way, we can define the 
 # negative log likelihood function as
 
-# %%
 def negative_log_likelihood(E):
     def loss(y_true, y_pred):
         
@@ -167,30 +131,26 @@ def negative_log_likelihood(E):
     
     return loss
 
-
-# %% [markdown]
-# with regularization added further on (as part of the network architecture).
-#
-# ## Define model parameters
+################################################################################################
+# SECTION 6: MODEL PARAMETERS
+################################################################################################
 # Nothing spectacular here. You can see these are pretty standard parameters.
 # We will use the values reported in Table 2 (p. 10).
 #
 # If you decide to try a different dataset, be sure to change these
 # accordingly!
 
-# %%
 activation = 'relu'
 n_nodes = 48
 learning_rate = 0.067
 l2_reg = 16.094
 dropout = 0.147
-lr_decay =  6.494e-4
+lr_decay = 6.494e-4
 momentum = 0.863
 
-
-# %% [markdown]
-#
-# ## Model construction
+################################################################################################
+# SECTION 7: MODEL CONSTRUCTION
+################################################################################################
 # Now we can build the model. We will do this using the `Sequential` 
 # constructor, thus adding layer by layer.
 #
@@ -204,7 +164,6 @@ momentum = 0.863
 # It is slightly different for each dataset (mainly the optimizer and 
 # number of hidden layers).
 
-# %%
 # Create model
 model = Sequential()
 model.add(Dense(units=n_features, activation=activation, kernel_initializer='glorot_uniform', input_shape=(n_features,)))
@@ -225,8 +184,9 @@ optimizer = Nadam(learning_rate=learning_rate, decay=lr_decay)
 model.compile(loss=negative_log_likelihood(E_train), optimizer=optimizer)
 model.summary()
 
-
-# %% [markdown]
+################################################################################################
+# SECTION 8: CALLBACKS
+################################################################################################
 # Sometimes, the computation of the loss yields a `NaN`, which makes the whole
 # output be `NaN` as well. I haven't identified a pattern, actually I think
 # it is quite random. This could be due to a variety of reasons, including
@@ -240,17 +200,16 @@ model.summary()
 #
 # We can achieve this very easily using [callbacks](https://www.tensorflow.org/api_docs/python/tf/keras/callbacks/Callback)
 
-# %%
 callbacks = [tf.keras.callbacks.TerminateOnNaN(),
              tf.keras.callbacks.ModelCheckpoint(str(PATH_MODELS/f'{example_file}.h5'), monitor='loss', save_best_only=True, mode='min')]
 
-# %% [markdown]
-# ## Model fitting
+################################################################################################
+# SECTION 9: MODEL TRAINING
+################################################################################################
 # Now we can fit the DeepSurv model. Notice how we use the whole set of 
 # patients in a batch. Furthermore, be sure that `shuffle` is set to `False`, 
 # since order is important in predicting ranked survival.
 
-# %%
 epochs = 500
 history = model.fit(X_train, Y_train, 
                     batch_size=n_patients_train, 
@@ -258,29 +217,30 @@ history = model.fit(X_train, Y_train,
                     callbacks=callbacks,
                     shuffle=False)
 
-# %% [markdown]
+################################################################################################
+# SECTION 10: VISUALIZE TRAINING PROGRESS
+################################################################################################
 # We can see how the loss changed with the number of epochs.
 
-# %%
 fig, ax = plt.subplots(1, 1, figsize=[5, 5])
 plt.plot(history.history['loss'], label='train')
 ax.set_xlabel("No. epochs")
 ax.set_ylabel("Loss [u.a.]")
 
-
-# %% [markdown]
+################################################################################################
+# SECTION 11: LOAD BEST MODEL AND PREDICT
+################################################################################################
 # During training, we saved the model with the lowest loss value (i.e., Early Stop).
 # Now, we need to load it. Since we defined our own custom function,
 # it is important to [use the `compile=False` parameter](https://github.com/keras-team/keras/issues/5916#issuecomment-592269254).
 
-# %%
 model = load_model(PATH_MODELS/f'{example_file}.h5', compile=False)
 
-# %% [markdown]
-# ## Model predictions
+################################################################################################
+# SECTION 12: EVALUATION AND RESULTS
+################################################################################################
 # Finally, we can generate predictions using the DeepSurv model.
 
-# %%
 Y_pred_train = np.exp(-model.predict(X_train))
 c_index_train = utils.concordance_index(Y_train, Y_pred_train, E_train)
 print(f"c-index of training dataset = {c_index_train}")
@@ -289,6 +249,5 @@ Y_pred_test = np.exp(-model.predict(X_test))
 c_index_test = utils.concordance_index(Y_test, Y_pred_test, E_test)
 print(f"c-index of testing dataset = {c_index_test}")
 
-# %% [markdown]
 # We can see that these numbers are within the ballpark estimate of what is
 # reported in the original paper for this dataset (0.86-0.87, Table 1, p. 6).
