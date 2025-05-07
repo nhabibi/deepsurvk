@@ -1,27 +1,3 @@
-# ---
-# jupyter:
-#   jupytext:
-#     formats: ipynb,py:percent
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.11.3
-#   kernelspec:
-#     display_name: Python 3
-#     language: python
-#     name: python3
-# ---
-
-# %% [markdown]
-# Before we begin, we will change a few settings to make the notebook look a bit prettier
-
-# %% language="html"
-# <style> body {font-family: "Calibri", cursive, sans-serif;} </style>
-
-
-# %% [markdown]
-#
 # # 03 - Parameter Optimization
 # So far, we have used parameters that have been previously reported (namely
 # in the original paper). However, more likely than not, you will be using
@@ -34,12 +10,11 @@
 #
 # This notebook assumes that you have gone through the [basics of DeepSurv](./00_understanding_deepsurv.ipynb)
 # as well as [DeepSurvK's basic usage](./01_deepsurvk_quickstart.ipynb)
-#
-# ## Preliminaries
-#
-# Import packages
 
-# %%
+####################################################################################################
+# SECTION 1: PRELIMINARIES AND IMPORTS
+####################################################################################################
+
 import pathlib
 import numpy as np
 from sklearn.compose import ColumnTransformer
@@ -48,22 +23,18 @@ from sklearn.preprocessing import StandardScaler
 import deepsurvk
 from deepsurvk.datasets import load_rgbsg
 
-# %% [markdown]
 # Define paths.
-
-# %%
 PATH_MODELS = pathlib.Path(f'./models/')
 
 # If models directory does not exist, create it.
 if not PATH_MODELS.exists():
     PATH_MODELS.mkdir(parents=True)
 
-
-# %% [markdown]
-# ## Get data
+####################################################################################################
+# SECTION 2: DATA LOADING
+####################################################################################################
 # We will use the RGBSG dataset.
 
-# %%
 X_train, Y_train, E_train = load_rgbsg(partition='training')
 X_test, Y_test, E_test = load_rgbsg(partition='testing')
 
@@ -71,10 +42,10 @@ X_test, Y_test, E_test = load_rgbsg(partition='testing')
 n_patients_train = X_train.shape[0]
 n_features = X_train.shape[1]
 
-# %% [markdown]
-# ## Pre-process data
+####################################################################################################
+# SECTION 3: DATA PREPROCESSING
+####################################################################################################
 
-# %%
 # Standardization
 cols_standardize = ['grade', 'age', 'n_positive_nodes', 'progesterone', 'estrogen']
 X_ct = ColumnTransformer([('standardizer', StandardScaler(), cols_standardize)])
@@ -87,10 +58,9 @@ Y_scaler = StandardScaler().fit(Y_train)
 Y_train['T'] = Y_scaler.transform(Y_train)
 Y_test['T'] = Y_scaler.transform(Y_test)
 
-
-# %% [markdown]
-# ## (Hyper)parameter optimization
-#
+####################################################################################################
+# SECTION 4: HYPERPARAMETER DEFINITION
+####################################################################################################
 # We will define the parameters that we wish to explore as a dictionary.
 # Notice that all parameters must be given in a list, even if they consist
 # of a single value.
@@ -107,7 +77,6 @@ Y_test['T'] = Y_scaler.transform(Y_test)
 # - `n_nodes` - 2, 8
 # - `activation` - `relu`, `selu`
 
-# %%
 params = {'epochs':[999],
           'n_layers':[1, 16],
           'n_nodes':[2, 8], 
@@ -119,8 +88,9 @@ params = {'epochs':[999],
           'dropout':[0.661],
           'optimizer':['nadam']}
 
-
-# %% [markdown]
+####################################################################################################
+# SECTION 5: HYPERPARAMETER OPTIMIZATION
+####################################################################################################
 # This will results in testing a very small number of 
 # possible combinations (8). Using a grid search with default values, the 
 # optimization will use 3 folds (as reported in the original paper) and 
@@ -149,8 +119,6 @@ params = {'epochs':[999],
 # In theory, we should get the reported values for these parameters 
 # (`n_layers = 1`, `n_nodes = 8`, `activation = selu`).
 
-
-# %%
 best_params = deepsurvk.optimize_hp(X_train, Y_train, E_train, 
                                     mode='grid', 
                                     n_splits=3, 
@@ -160,7 +128,6 @@ best_params = deepsurvk.optimize_hp(X_train, Y_train, E_train,
 
 print(best_params)
 
-# %% [markdown]
 # > Alternatively, DeepSurvK also comes with a randomized hyperparameter
 # > search. For this, call `optimize_hp` with parameter `mode = 'random'`.
 # > Additionally, the number of iterations can be defined with the
@@ -175,16 +142,21 @@ print(best_params)
 # >
 # > In both cases, providing a single value will guarantee that is always
 # > used (i.e., it will be fixed).
-#
+
+####################################################################################################
+# SECTION 6: MODEL CREATION WITH OPTIMIZED PARAMETERS
+####################################################################################################
 # This looks good. Now, as usual, we can just create a new model with the
 # optimized parameters, fit it, and generate predictions.
 
-# %%
 dsk = deepsurvk.DeepSurvK(n_features=n_features, E=E_train, **best_params)
 loss = deepsurvk.negative_log_likelihood(E_train)
 dsk.compile(loss=loss)
 
-# %%
+####################################################################################################
+# SECTION 7: MODEL TRAINING
+####################################################################################################
+
 callbacks = deepsurvk.common_callbacks()
 epochs = 1000
 history = dsk.fit(X_train, Y_train, 
@@ -193,10 +165,13 @@ history = dsk.fit(X_train, Y_train,
                   callbacks=callbacks,
                   shuffle=False)
 
-# %%
+####################################################################################################
+# SECTION 8: VISUALIZATION AND EVALUATION
+####################################################################################################
+
 deepsurvk.plot_loss(history)
 
-# %%
 Y_pred_test = np.exp(-dsk.predict(X_test))
 c_index_test = deepsurvk.concordance_index(Y_test, Y_pred_test, E_test)
 print(f"c-index of testing dataset = {c_index_test}")
+####################################################################################################

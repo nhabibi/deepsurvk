@@ -8,8 +8,6 @@
 # SECTION 1: PRELIMINARIES AND IMPORTS
 ################################################################################################
 
-# pip3 install tensorflow numpy scikit-learn lifelines h5py
-
 import pathlib
 import numpy as np
 
@@ -251,3 +249,5 @@ print(f"c-index of testing dataset = {c_index_test}")
 
 # We can see that these numbers are within the ballpark estimate of what is
 # reported in the original paper for this dataset (0.86-0.87, Table 1, p. 6).
+
+################################################################################################
