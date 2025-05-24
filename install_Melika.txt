@@ -1,0 +1,80 @@
+
+####################################################################################
+***Option 1: Melika
+
+python3 -V 
+
+# Create virtual environment with specific Python version
+/usr/local/bin/python3 -m venv venv_38
+
+# Activate the virtual environment
+source venv_38/bin/activate
+
+# Check version (should now show 3.8.10)
+python -V
+python3 -V
+
+
+pip install -r requirements_38.txt
+pip install -e .
+
+pip install protobuf=3.20.3
+
+cd deepsurvk
+pip install -e .
+
+python3 01_deepsurvk_quickstart
+
+####################################################################################
+***Option 2: conda
+
+# Deactivate current venv
+deactivate
+
+# Install conda/miniconda if you don't have it
+# Then create environment with older TensorFlow
+conda create -n deepsurvk_env python=3.8
+conda activate deepsurvk_env
+
+# Try to install older TensorFlow through conda
+conda install tensorflow=2.4.0
+# or
+conda install tensorflow=2.2.0
+
+# If successful, then install other requirements
+pip install -r requirements_38.txt
+pip install -e .
+
+
+# Create a Dockerfile with older Python/TensorFlow
+FROM python:3.8-slim
+RUN pip install tensorflow==2.2.0 numpy==1.18.0
+
+...
+
+####################################################################################
+***Option 3: Modify DeepSurvK for modern TensorFlow
+
+# Create a Dockerfile with older Python/TensorFlow
+FROM python:3.8-slim
+RUN pip install tensorflow==2.2.0 numpy==1.18.0
+# ... rest of old requirements
+
+
+####################################################################################
+***Option 4: Modify DeepSurvK for modern TensorFlow
+
+Update the DeepSurvK source code to work with TensorFlow 2.13+. This requires code changes in the package.
+
+####################################################################################
+***Option 5: Use an alternative modern library
+
+pip install scikit-survival  # Modern, actively maintained
+# or
+pip install pycox  # PyTorch-based
+
+####################################################################################
+
+
+
+
