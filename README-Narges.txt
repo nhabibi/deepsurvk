@@ -108,10 +108,31 @@ python3 examples/01_deepsurvk_quickstart.py
 - End crash: Normal TF 2.4.0 ARM64 behavior, doesn't affect functionality
 
 ####################################################################################
-***SYSTEM REQUIREMENTS:
-- macOS with Apple Silicon (M1/M2/M3)
-- Miniconda installed
-- Python 3.8 environment
+***APPROACH 5B: Python REPL Method (Crash-Free) ✅
+
+# If you want to avoid the end crash, run step-by-step in Python:
+python3
+
+# Then paste these commands one by one:
+import numpy as np
+import tensorflow as tf
+from sklearn.preprocessing import StandardScaler
+import deepsurvk
+from deepsurvk.datasets import load_whas
+
+# Load and preprocess data
+X_train, Y_train, E_train = load_whas(partition='training', data_type='np')
+X_test, Y_test, E_test = load_whas(partition='testing', data_type='np')
+
+# Continue with preprocessing and training...
+# (Copy sections from 01_deepsurvk_quickstart.py as needed)
+
+# Exit cleanly
+exit()
 
 ####################################################################################
+***COMPARISON:
+- Script method: Fast, complete run, crashes at end (harmless)
+- REPL method: Manual, step-by-step, no crash, better for debugging
+
 ####################################################################################
