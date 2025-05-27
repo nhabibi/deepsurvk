@@ -100,7 +100,7 @@ python3 examples/01_deepsurvk_quickstart.py
 
 ####################################################################################
 ####################################################################################
-***APPROACH 5B: Python REPL Method (Crash-Free) ✅
+***Approach 5B: Python REPL Method (Crash-Free) ✅
 
 # If you want to avoid the end crash, run step-by-step in Python:
 python3
@@ -159,3 +159,10 @@ print(f"c-index of testing dataset = {c_index_test}")
 exit()
 
 ####################################################################################
+####################################################################################
+***Approach  6: Try https://github.com/going-doer/Paper2Code
+
+
+####################################################################################
+
+
